@@ -1,26 +1,26 @@
-const { 
-  Client, 
-  GatewayIntentBits, 
-  EmbedBuilder, 
-  REST, 
-  Routes 
+const {
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder,
+  REST,
+  Routes
 } = require("discord.js");
 
-const TOKEN = process.env.TOKEN; // 토큰은 환경변수
-const CLIENT_ID = process.env.CLIENT_ID; // 봇 ID
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// 랜덤 6글자 닉네임
-function randomNick() {
+// 닉네임 생성
+function randomNick(length, prefix = "") {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let res = "";
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < length; i++) {
     res += chars[Math.floor(Math.random() * chars.length)];
   }
-  return res;
+  return prefix + res;
 }
 
 // 비밀번호 생성
@@ -46,10 +46,31 @@ client.once("ready", () => {
   console.log(`로그인됨: ${client.user.tag}`);
 });
 
-// 슬래시 명령어 처리
+// 명령어 처리
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== "생성") return;
+
+  const length = interaction.options.getInteger("길이") ?? 6;
+  const nekoToggle = interaction.options.getBoolean("neko") ?? false;
+
+  // 로블록스 제한
+  if (length < 4 || length > 20) {
+    return interaction.reply({
+      content: "길이는 4~20자만 가능함",
+      ephemeral: true
+    });
+  }
+
+  const prefix = nekoToggle ? "NEKO" : "";
+
+  // 접두사 포함해서 20자 초과 방지
+  if (prefix.length + length > 20) {
+    return interaction.reply({
+      content: "NEKO 포함 시 총 길이가 20자를 초과함",
+      ephemeral: true
+    });
+  }
 
   let seconds = 0;
 
@@ -62,14 +83,13 @@ client.on("interactionCreate", async (interaction) => {
 
   const interval = setInterval(async () => {
     seconds++;
-
     embed.setDescription(`닉네임 찾는 중... (${seconds}초)`);
     await interaction.editReply({ embeds: [embed] });
 
     if (seconds >= Math.floor(Math.random() * 4) + 4) {
       clearInterval(interval);
 
-      const nick = randomNick();
+      const nick = randomNick(length, prefix);
       const password = randomPassword();
 
       const done = new EmbedBuilder()
@@ -77,6 +97,8 @@ client.on("interactionCreate", async (interaction) => {
         .setColor(0x57f287)
         .addFields(
           { name: "닉네임", value: `\`${nick}\`` },
+          { name: "길이", value: `${length}자`, inline: true },
+          { name: "NEKO", value: nekoToggle ? "ON" : "OFF", inline: true },
           { name: "비밀번호", value: `\`${password}\`` },
           { name: "소요 시간", value: `${seconds}초` }
         );
@@ -85,7 +107,7 @@ client.on("interactionCreate", async (interaction) => {
         await interaction.user.send({ embeds: [done] });
         await interaction.editReply({
           embeds: [
-            embed.setDescription("완료됨! DM 확인해라")
+            embed.setDescription("생성 완료되었습니다. 디엠을 확인하세요.")
           ]
         });
       } catch {
@@ -110,7 +132,23 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
         body: [
           {
             name: "생성",
-            description: "랜덤 6글자 닉네임 생성"
+            description: "로블록스 닉네임 생성",
+            options: [
+              {
+                name: "길이",
+                description: "닉네임 글자 수 (4~20)",
+                type: 4, // INTEGER
+                required: false,
+                min_value: 4,
+                max_value: 20
+              },
+              {
+                name: "neko",
+                description: "NEKO 접두사 붙이기",
+                type: 5, // BOOLEAN
+                required: false
+              }
+            ]
           }
         ]
       }
