@@ -16,7 +16,7 @@ const {
 // ================= 설정 =================
 const MAX_TIME = 20;          // 최대 시도 시간 (초)
 const CHECK_DELAY = 600;      // 닉 체크 간격 (ms)
-const UNDERSCORE_RATE = 0.35; // _ 확률 (성공률 핵심)
+const UNDERSCORE_RATE = 0.35; // _ 등장 확률 (최대 1개)
 // =======================================
 
 const client = new Client({
@@ -29,14 +29,24 @@ function randomChar() {
   return chars[Math.floor(Math.random() * chars.length)];
 }
 
+// _ 최대 1개 보장
 function generateNick(length, neko) {
   let nick = neko ? 'NEKO' : '';
+  let underscoreUsed = false;
+
   while (nick.length < length) {
-    nick += Math.random() < UNDERSCORE_RATE ? '_' : randomChar();
+    if (!underscoreUsed && Math.random() < UNDERSCORE_RATE) {
+      nick += '_';
+      underscoreUsed = true;
+    } else {
+      nick += randomChar();
+    }
   }
+
   return nick;
 }
 
+// ---------- 비밀번호 생성 ----------
 function generatePassword(length = 14) {
   const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const lower = 'abcdefghijklmnopqrstuvwxyz';
@@ -53,9 +63,11 @@ function generatePassword(length = 14) {
   while (pass.length < length) {
     pass += all[Math.floor(Math.random() * all.length)];
   }
+
   return pass.split('').sort(() => 0.5 - Math.random()).join('');
 }
 
+// ---------- Roblox 닉 사용 가능 여부 ----------
 async function isAvailable(username) {
   try {
     const res = await fetch('https://users.roblox.com/v1/usernames/users', {
@@ -66,6 +78,7 @@ async function isAvailable(username) {
         excludeBannedUsers: false,
       }),
     });
+
     const data = await res.json();
     return data.data.length === 0;
   } catch {
@@ -73,7 +86,7 @@ async function isAvailable(username) {
   }
 }
 
-// ---------- 슬래시 명령어 ----------
+// ---------- 슬래시 명령어 등록 ----------
 async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
@@ -87,6 +100,7 @@ async function registerCommands() {
     Routes.applicationCommands(process.env.CLIENT_ID),
     { body: commands }
   );
+
   console.log('슬래시 명령어 등록 완료');
 }
 
@@ -196,7 +210,7 @@ client.on('interactionCreate', async interaction => {
 
     const done = new EmbedBuilder()
       .setTitle('✅ 생성 완료')
-      .setDescription(`총 소요 시간: ${elapsed}초\nDM을 확인하세요`)
+      .setDescription(`총 소요 시간: ${elapsed}초\ndm을 확인하세요`)
       .setColor(0x00ff88);
 
     await interaction.editReply({ embeds: [done] });
