@@ -13,7 +13,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// 닉네임 생성
+// 닉네임 생성 시발
 function randomNick(length, prefix = "") {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let res = "";
