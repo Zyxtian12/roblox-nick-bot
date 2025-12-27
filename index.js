@@ -16,7 +16,7 @@ const fetch = require('node-fetch');
 
 // ================= 설정 =================
 const MAX_TIME = 20;          // 최대 시도 시간 (초)
-const CHECK_DELAY = 600;      // 닉 체크 간격 (ms)
+const CHECK_DELAY = 200;      // 닉 체크 간격 (ms)
 const UNDERSCORE_RATE = 0.6;  // _ 등장 확률
 // =======================================
 
@@ -31,25 +31,31 @@ function randomChar() {
   return CHARS[Math.floor(Math.random() * CHARS.length)];
 }
 
-// _ 최대 1개, 앞/뒤 금지
 function generateNick(length, neko) {
-  let baseLength = neko ? length - 4 : length;
-  if (baseLength < 3) return null;
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const prefix = neko ? 'NEKO' : '';
+  const bodyLength = length - prefix.length;
+  if (bodyLength < 3) return null;
 
-  let nick = '';
-  let underscoreIndex = -1;
+  let arr = [];
 
-  if (Math.random() < UNDERSCORE_RATE) {
-    underscoreIndex = Math.floor(Math.random() * (baseLength - 2)) + 1;
+  // 1️⃣ 먼저 전부 랜덤 문자로 채움
+  for (let i = 0; i < bodyLength; i++) {
+    arr.push(chars[Math.floor(Math.random() * chars.length)]);
   }
 
-  for (let i = 0; i < baseLength; i++) {
-    if (i === underscoreIndex) nick += '_';
-    else nick += randomChar();
+  // 2️⃣ 확률적으로 _ 삽입 (중간만)
+  if (Math.random() < 0.7) {
+    const pos = Math.floor(Math.random() * (bodyLength - 2)) + 1;
+    arr[pos] = '_';
   }
 
-  return neko ? `NEKO${nick}` : nick;
+  // 3️⃣ 앞/뒤 안전장치
+  if (arr[0] === '_' || arr[arr.length - 1] === '_') return null;
+
+  return prefix + arr.join('');
 }
+
 
 // ---------- 비밀번호 ----------
 function generatePassword(length = 14) {
